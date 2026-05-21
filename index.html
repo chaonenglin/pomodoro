@@ -516,7 +516,7 @@
     <span class="sound-label">提示音</span>
     <button class="sound-btn active" data-sound="classic" title="经典">&#x1F514;</button>
     <button class="sound-btn" data-sound="chime" title="风铃">&#x1F3B5;</button>
-    <button class="sound-btn" data-sound="digital" title="电子">&#x1F4F3;</button>
+    <button class="sound-btn" data-sound="digital" title="小猫">&#x1F431;</button>
     <button class="sound-btn muted" data-sound="none" title="静音">&#x1F507;</button>
   </div>
 
@@ -546,6 +546,7 @@
 <div class="particles-container" id="particlesContainer"></div>
 
 <audio id="bgmAudio" src="铃声bgm.mp3" preload="auto"></audio>
+<audio id="catAudio" src="猫叫bgm.mp3" preload="auto"></audio>
 
 <script>
 const CIRCUMFERENCE = 2 * Math.PI * 108;
@@ -831,9 +832,9 @@ function playSound() {
         chimeNote(ctx, freq, t + i * 0.22, 0.8, 0.5);
       });
     } else if (soundType === 'digital') {
-      [440, 523, 659].forEach(function(freq, i) {
-        digitalTone(ctx, freq, t + i * 0.15, 0.25, 0.55);
-      });
+      var cat = document.getElementById('catAudio');
+      cat.currentTime = 0;
+      cat.play().catch(function() {});
     }
   } catch(e) { /* audio not available */ }
 }
@@ -847,8 +848,8 @@ function getSoundLoopInterval() {
 
 function startAlertLoop() {
   if (soundType === 'none') return;
-  if (soundType === 'classic') {
-    var audio = document.getElementById('bgmAudio');
+  if (soundType === 'classic' || soundType === 'digital') {
+    var audio = soundType === 'classic' ? document.getElementById('bgmAudio') : document.getElementById('catAudio');
     audio.loop = true;
     audio.currentTime = 0;
     audio.play().catch(function() {});
@@ -864,9 +865,9 @@ function stopAlertLoop() {
     alertLoopId = null;
   }
   var audio = document.getElementById('bgmAudio');
-  audio.loop = false;
-  audio.pause();
-  audio.currentTime = 0;
+  audio.loop = false; audio.pause(); audio.currentTime = 0;
+  var cat = document.getElementById('catAudio');
+  cat.loop = false; cat.pause(); cat.currentTime = 0;
 }
 
 function showAlert() {
