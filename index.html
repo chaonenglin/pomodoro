@@ -597,7 +597,131 @@ document.getElementById('breakPresets').addEventListener('click', function(e) {
   chip.classList.add('active');
 });
 
-// --- Sound ---
+// --- Sound engine ---
+function bellTone(ctx, freq, startTime, duration, volume) {
+  // Inharmonic bell partials with pitch glide and detuning for natural sound
+  var partials = [
+    { ratio: 1.0,   gain: 1.0,  detune: 0 },
+    { ratio: 2.4,   gain: 0.55, detune: 5 },
+    { ratio: 5.2,   gain: 0.30, detune: -3 },
+    { ratio: 7.1,   gain: 0.15, detune: 8 },
+  ];
+  partials.forEach(function(p) {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    var f = freq * p.ratio;
+    osc.frequency.setValueAtTime(f + p.detune, startTime);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.7, startTime + duration * 0.3);
+    gain.gain.setValueAtTime(volume * p.gain * 0.6, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.1);
+  });
+}
+
+function chimeNote(ctx, freq, startTime, duration, volume) {
+  // Wind chime: brighter harmonics, longer sustain, slight detune for airiness
+  var partials = [
+    { ratio: 1.0,   gain: 1.0,  detune: 12 },
+    { ratio: 2.76,  gain: 0.5,  detune: -7 },
+    { ratio: 5.4,   gain: 0.25, detune: 15 },
+  ];
+  partials.forEach(function(p) {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    var f = freq * p.ratio;
+    osc.frequency.setValueAtTime(f + p.detune, startTime);
+    gain.gain.setValueAtTime(volume * p.gain * 0.4, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.15);
+  });
+}
+
+function digitalTone(ctx, freq, startTime, duration, volume) {
+  // Clean modern notification: carrier + subtle FM modulation
+  var mod = ctx.createOscillator();
+  var modGain = ctx.createGain();
+  var car = ctx.createOscillator();
+  var outGain = ctx.createGain();
+  mod.connect(modGain);
+  modGain.connect(car.frequency);
+  car.connect(outGain);
+  outGain.connect(ctx.destination);
+
+  mod.type = 'sine';
+  mod.frequency.setValueAtTime(freq * 3, startTime);
+  car.type = 'sine';
+  car.frequency.setValueAtTime(freq, startTime);
+  modGain.gain.setValueAtTime(freq * 0.3, startTime);
+  modGain.gain.exponentialRampToValueAtTime(1, startTime + duration * 0.5);
+  outGain.gain.setValueAtTime(volume * 0.5, startTime);
+  outGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+  mod.start(startTime);
+  mod.stop(startTime + duration + 0.05);
+  car.start(startTime);
+  car.stop(startTime + duration + 0.05);
+}
+
+function getAudioCtx() {
+  return new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playSound() {
+  if (soundType === 'none') return;
+  try {
+    var ctx = getAudioCtx();
+    var t = ctx.currentTime;
+
+    if (soundType === 'classic') {
+      // Kitchen timer: two-note ascending bell "ding-ding-ding"
+      [587, 784, 988].forEach(function(freq, i) {
+        bellTone(ctx, freq, t + i * 0.35, 0.45, 0.7);
+      });
+    } else if (soundType === 'chime') {
+      // Wind chime cascading arpeggio C5→E5→G5→C6→E6
+      [523, 659, 784, 1047, 1319].forEach(function(freq, i) {
+        chimeNote(ctx, freq, t + i * 0.22, 0.8, 0.5);
+      });
+    } else if (soundType === 'digital') {
+      // Rising digital notification: A4→C5→E5
+      [440, 523, 659].forEach(function(freq, i) {
+        digitalTone(ctx, freq, t + i * 0.15, 0.25, 0.55);
+      });
+    }
+  } catch(e) { /* audio not available */ }
+}
+
+function previewSound(type) {
+  if (type === 'none') return;
+  try {
+    var ctx = getAudioCtx();
+    var t = ctx.currentTime;
+
+    if (type === 'classic') {
+      // Preview: single bell strike
+      bellTone(ctx, 784, t, 0.5, 0.6);
+    } else if (type === 'chime') {
+      // Preview: two chime notes
+      [659, 1047].forEach(function(freq, i) {
+        chimeNote(ctx, freq, t + i * 0.18, 0.55, 0.45);
+      });
+    } else if (type === 'digital') {
+      // Preview: single digital ping
+      digitalTone(ctx, 523, t, 0.3, 0.5);
+      digitalTone(ctx, 659, t + 0.12, 0.25, 0.4);
+    }
+  } catch(e) { /* audio not available */ }
+}
+
+// --- Sound selection ---
 document.querySelector('.sound-row').addEventListener('click', function(e) {
   var btn = e.target.closest('.sound-btn');
   if (!btn) return;
@@ -605,65 +729,11 @@ document.querySelector('.sound-row').addEventListener('click', function(e) {
   localStorage.setItem('pomodoroSound', soundType);
   document.querySelectorAll('.sound-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
+  previewSound(soundType);
 });
 
 // Set initial sound button state
 document.querySelector('.sound-btn[data-sound="' + soundType + '"]').classList.add('active');
-
-function playSound() {
-  if (soundType === 'none') return;
-
-  try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-
-    if (soundType === 'classic') {
-      // Three ascending beeps
-      [0, 0.2, 0.4].forEach(function(delay, i) {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = i === 2 ? 1000 : 800;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.3);
-      });
-    } else if (soundType === 'chime') {
-      // Soft melodic chime
-      var notes = [523, 659, 784, 1047];
-      notes.forEach(function(freq, i) {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        var t = ctx.currentTime + i * 0.18;
-        gain.gain.setValueAtTime(0.2, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
-        osc.start(t);
-        osc.stop(t + 0.55);
-      });
-    } else if (soundType === 'digital') {
-      // Two-tone digital alert
-      [800, 1200].forEach(function(freq, i) {
-        var osc = ctx.createOscillator();
-        var gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = 'square';
-        var t = ctx.currentTime + i * 0.25;
-        gain.gain.setValueAtTime(0.15, t);
-        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
-        osc.start(t);
-        osc.stop(t + 0.25);
-      });
-    }
-  } catch(e) { /* audio not available */ }
-}
 
 // --- Celebration particles ---
 function celebrate() {
