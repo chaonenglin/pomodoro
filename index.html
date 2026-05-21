@@ -520,6 +520,11 @@
     <button class="sound-btn muted" data-sound="none" title="静音">&#x1F507;</button>
   </div>
 
+  <div class="sound-row" id="wakeRow" style="display:none;">
+    <span class="sound-label">防息屏</span>
+    <button class="sound-btn" id="wakeBtn" title="防止手机息屏">📱</button>
+  </div>
+
   <div class="buttons">
     <button class="btn btn-primary" id="btnToggle" onclick="toggleTimer()">开始</button>
     <button class="btn btn-secondary" id="btnReset" onclick="resetTimer()">重置</button>
@@ -942,6 +947,57 @@ document.getElementById('themeRow').addEventListener('click', function(e) {
 
 // Init theme
 applyTheme(currentTheme);
+
+// --- Wake Lock (keep screen on) ---
+var wakeLock = null;
+var wakeEnabled = false;
+
+function setWakeUI(on) {
+  var btn = document.getElementById('wakeBtn');
+  if (on) {
+    btn.textContent = '📱';
+    btn.style.borderColor = '#4CAF50';
+    btn.style.background = '#e8f5e9';
+  } else {
+    btn.textContent = '📱';
+    btn.style.borderColor = '#e0e0e0';
+    btn.style.background = '#fff';
+  }
+}
+
+async function requestWakeLock() {
+  if (!wakeEnabled) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', function() { wakeLock = null; });
+  } catch(e) { /* user gesture or not supported */ }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) { wakeLock.release().catch(function() {}); wakeLock = null; }
+}
+
+document.getElementById('wakeBtn').addEventListener('click', function() {
+  wakeEnabled = !wakeEnabled;
+  setWakeUI(wakeEnabled);
+  if (wakeEnabled) { requestWakeLock(); } else { releaseWakeLock(); }
+  localStorage.setItem('pomodoroWake', wakeEnabled ? '1' : '0');
+});
+
+// Re-acquire lock when page becomes visible again
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') requestWakeLock();
+});
+
+// Init wake lock
+if ('wakeLock' in navigator) {
+  document.getElementById('wakeRow').style.display = 'flex';
+  if (localStorage.getItem('pomodoroWake') === '1') {
+    wakeEnabled = true;
+    setWakeUI(true);
+    requestWakeLock();
+  }
+}
 
 // --- Alert dismiss handlers ---
 document.getElementById('alertDismissBtn').addEventListener('click', dismissAlert);
