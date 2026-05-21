@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>番茄钟</title>
+
+<!-- PWA Meta -->
+<meta name="theme-color" content="#e74c3c" id="themeMeta">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="番茄钟">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+
+<style>
+  :root {
+    --work-color: #e74c3c;
+    --work-light: #fce4e4;
+    --break-color: #2ecc71;
+    --break-light: #e8f8e8;
+    --bg: #f5f0eb;
+    --card-bg: #ffffff;
+    --text: #2c3e50;
+    --text-secondary: #7f8c8d;
+    --ring-bg: #ecf0f1;
+    --shadow: 0 8px 32px rgba(0,0,0,0.10);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html {
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    transition: background 0.5s;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  body.break-mode { background: #eaf7ee; }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 48px 40px 36px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    width: 380px;
+    max-width: 90vw;
+    transition: box-shadow 0.3s;
+  }
+
+  .mode-badge {
+    display: inline-block;
+    padding: 6px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 28px;
+    background: var(--work-light);
+    color: var(--work-color);
+    transition: background 0.4s, color 0.4s;
+  }
+  body.break-mode .mode-badge {
+    background: var(--break-light);
+    color: var(--break-color);
+  }
+
+  .timer-ring-wrap {
+    position: relative;
+    width: 240px; height: 240px;
+    margin: 0 auto 28px;
+  }
+  .timer-ring-wrap svg {
+    transform: rotate(-90deg);
+    width: 100%; height: 100%;
+  }
+  .ring-bg {
+    fill: none;
+    stroke: var(--ring-bg);
+    stroke-width: 8;
+  }
+  .ring-progress {
+    fill: none;
+    stroke: var(--work-color);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke 0.4s, stroke-dashoffset 0.35s;
+  }
+  body.break-mode .ring-progress { stroke: var(--break-color); }
+
+  .time-display {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 56px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    letter-spacing: 2px;
+  }
+
+  .session-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 28px;
+    letter-spacing: 0.5px;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .btn {
+    border: none;
+    border-radius: 12px;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.3s, color 0.3s;
+    letter-spacing: 0.5px;
+    min-height: 48px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-primary {
+    background: var(--work-color);
+    color: #fff;
+    min-width: 110px;
+    box-shadow: 0 4px 14px rgba(231,76,60,0.35);
+  }
+  body.break-mode .btn-primary {
+    background: var(--break-color);
+    box-shadow: 0 4px 14px rgba(46,204,113,0.35);
+  }
+  .btn-secondary {
+    background: var(--ring-bg);
+    color: var(--text);
+  }
+  .btn-secondary:hover { background: #d5dde5; }
+  .btn-secondary:active { background: #d5dde5; }
+
+  .page-title {
+    font-size: 13px;
+    color: #bdc3c7;
+    margin-top: 24px;
+    letter-spacing: 2px;
+  }
+
+  /* Mobile: small phones (< 400px) */
+  @media (max-width: 420px) {
+    .card {
+      padding: 32px 20px 24px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 100vw;
+      margin: 0 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .timer-ring-wrap {
+      width: 200px; height: 200px;
+      margin-bottom: 22px;
+    }
+    .time-display {
+      font-size: 44px;
+    }
+    .mode-badge {
+      font-size: 13px;
+      padding: 5px 16px;
+      margin-bottom: 22px;
+    }
+    .btn {
+      padding: 14px 24px;
+      font-size: 15px;
+      min-height: 48px;
+      border-radius: 14px;
+    }
+    .btn-primary { min-width: 100px; }
+    .session-count { font-size: 12px; margin-bottom: 22px; }
+    .page-title { font-size: 11px; margin-top: 18px; }
+    .buttons { gap: 10px; }
+  }
+
+  /* Larger mobile / tablets */
+  @media (min-width: 421px) and (max-width: 768px) {
+    .card {
+      padding: 40px 32px 30px;
+    }
+    .timer-ring-wrap {
+      width: 220px; height: 220px;
+    }
+    .time-display {
+      font-size: 50px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="mode-badge" id="modeBadge">工作中</div>
+
+  <div class="timer-ring-wrap">
+    <svg width="240" height="240" viewBox="0 0 240 240">
+      <circle class="ring-bg" cx="120" cy="120" r="108"/>
+      <circle class="ring-progress" id="ringProgress" cx="120" cy="120" r="108"
+              stroke-dasharray="678.584" stroke-dashoffset="0"/>
+    </svg>
+    <div class="time-display" id="timeDisplay">25:00</div>
+  </div>
+
+  <div class="session-count" id="sessionCount">已完成 0 个番茄</div>
+
+  <div class="buttons">
+    <button class="btn btn-primary" id="btnToggle" onclick="toggleTimer()">开始</button>
+    <button class="btn btn-secondary" id="btnReset" onclick="resetTimer()">重置</button>
+  </div>
+
+  <div class="page-title">POMODORO</div>
+</div>
+
+<script>
+const WORK_SEC = 25 * 60;
+const BREAK_SEC = 5 * 60;
+const CIRCUMFERENCE = 2 * Math.PI * 108;
+
+let isWork = true;
+let remaining = WORK_SEC;
+let totalDuration = WORK_SEC;
+let timerId = null;
+let cycleCount = parseInt(localStorage.getItem('pomodoroCycles') || '0', 10);
+
+const modeBadge = document.getElementById('modeBadge');
+const ringProgress = document.getElementById('ringProgress');
+const timeDisplay = document.getElementById('timeDisplay');
+const sessionCount = document.getElementById('sessionCount');
+const btnToggle = document.getElementById('btnToggle');
+const themeMeta = document.getElementById('themeMeta');
+
+function updateUI() {
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  timeDisplay.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+
+  const fraction = remaining / totalDuration;
+  ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - fraction);
+
+  document.body.classList.toggle('break-mode', !isWork);
+  if (isWork) {
+    modeBadge.textContent = '工作中';
+    themeMeta.content = '#e74c3c';
+  } else {
+    modeBadge.textContent = '休息中';
+    themeMeta.content = '#2ecc71';
+  }
+
+  sessionCount.textContent = '已完成 ' + cycleCount + ' 个番茄';
+}
+
+function toggleTimer() {
+  if (timerId) { pauseTimer(); } else { startTimer(); }
+}
+
+function startTimer() {
+  timerId = setInterval(tick, 1000);
+  btnToggle.textContent = '暂停';
+}
+
+function pauseTimer() {
+  clearInterval(timerId);
+  timerId = null;
+  btnToggle.textContent = '开始';
+}
+
+function tick() {
+  remaining--;
+  updateUI();
+  if (remaining <= 0) {
+    clearInterval(timerId);
+    timerId = null;
+    playBeeps();
+    switchMode();
+    updateUI();
+    btnToggle.textContent = '开始';
+  }
+}
+
+function switchMode() {
+  if (isWork) {
+    cycleCount++;
+    localStorage.setItem('pomodoroCycles', cycleCount);
+  }
+  isWork = !isWork;
+  remaining = isWork ? WORK_SEC : BREAK_SEC;
+  totalDuration = isWork ? WORK_SEC : BREAK_SEC;
+}
+
+function resetTimer() {
+  clearInterval(timerId);
+  timerId = null;
+  isWork = true;
+  remaining = WORK_SEC;
+  totalDuration = WORK_SEC;
+  btnToggle.textContent = '开始';
+  updateUI();
+}
+
+function playBeeps() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  [0, 0.2, 0.4].forEach(function(delay, i) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = i === 2 ? 1000 : 800;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + 0.3);
+  });
+}
+
+// PWA: Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function() {});
+}
+
+// Init
+updateUI();
+</script>
+
+</body>
+</html>
