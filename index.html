@@ -540,6 +540,8 @@
 
 <div class="particles-container" id="particlesContainer"></div>
 
+<audio id="bgmAudio" src="铃声bgm.mp3" preload="auto"></audio>
+
 <script>
 const CIRCUMFERENCE = 2 * Math.PI * 108;
 
@@ -734,34 +736,27 @@ document.getElementById('breakPresets').addEventListener('click', function(e) {
 });
 
 // --- Sound engine ---
-function crispDing(ctx, freq, startTime, volume) {
-  // Bright, crisp ding: triangle fundamental + sine octave overtone, fast decay
-  var osc1 = ctx.createOscillator();
-  var osc2 = ctx.createOscillator();
-  var gain1 = ctx.createGain();
-  var gain2 = ctx.createGain();
-  osc1.connect(gain1);
-  osc2.connect(gain2);
-  gain1.connect(ctx.destination);
-  gain2.connect(ctx.destination);
-
-  osc1.type = 'triangle';
-  osc1.frequency.setValueAtTime(freq, startTime);
-  osc1.frequency.setValueAtTime(freq * 1.02, startTime + 0.01);
-  osc1.frequency.exponentialRampToValueAtTime(freq * 0.9, startTime + 0.2);
-
-  osc2.type = 'sine';
-  osc2.frequency.setValueAtTime(freq * 2.02, startTime);
-
-  gain1.gain.setValueAtTime(volume * 0.55, startTime);
-  gain1.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
-  gain2.gain.setValueAtTime(volume * 0.18, startTime);
-  gain2.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
-
-  osc1.start(startTime);
-  osc1.stop(startTime + 0.35);
-  osc2.start(startTime);
-  osc2.stop(startTime + 0.18);
+function bellTone(ctx, freq, startTime, duration, volume) {
+  var partials = [
+    { ratio: 1.0,   gain: 1.0,  detune: 0 },
+    { ratio: 2.4,   gain: 0.55, detune: 5 },
+    { ratio: 5.2,   gain: 0.30, detune: -3 },
+    { ratio: 7.1,   gain: 0.15, detune: 8 },
+  ];
+  partials.forEach(function(p) {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    var f = freq * p.ratio;
+    osc.frequency.setValueAtTime(f + p.detune, startTime);
+    osc.frequency.exponentialRampToValueAtTime(f * 0.7, startTime + duration * 0.3);
+    gain.gain.setValueAtTime(volume * p.gain * 0.6, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.1);
+  });
 }
 
 function chimeNote(ctx, freq, startTime, duration, volume) {
@@ -823,10 +818,9 @@ function playSound() {
     var t = ctx.currentTime;
 
     if (soundType === 'classic') {
-      // Crisp ascending ding-ding-ding: D6→F#6→A6
-      [1175, 1480, 1760].forEach(function(freq, i) {
-        crispDing(ctx, freq, t + i * 0.25, 0.65);
-      });
+      var audio = document.getElementById('bgmAudio');
+      audio.currentTime = 0;
+      audio.play().catch(function() {});
     } else if (soundType === 'chime') {
       [523, 659, 784, 1047, 1319].forEach(function(freq, i) {
         chimeNote(ctx, freq, t + i * 0.22, 0.8, 0.5);
@@ -847,7 +841,13 @@ function getSoundLoopInterval() {
 }
 
 function startAlertLoop() {
-  if (soundType !== 'none') {
+  if (soundType === 'none') return;
+  if (soundType === 'classic') {
+    var audio = document.getElementById('bgmAudio');
+    audio.loop = true;
+    audio.currentTime = 0;
+    audio.play().catch(function() {});
+  } else {
     playSound();
     alertLoopId = setInterval(playSound, getSoundLoopInterval());
   }
@@ -858,6 +858,10 @@ function stopAlertLoop() {
     clearInterval(alertLoopId);
     alertLoopId = null;
   }
+  var audio = document.getElementById('bgmAudio');
+  audio.loop = false;
+  audio.pause();
+  audio.currentTime = 0;
 }
 
 function showAlert() {
@@ -888,8 +892,7 @@ function previewSound(type) {
     var t = ctx.currentTime;
 
     if (type === 'classic') {
-      // Preview: single crisp ding
-      crispDing(ctx, 1480, t, 0.65);
+      bellTone(ctx, 784, t, 0.5, 0.6);
     } else if (type === 'chime') {
       // Preview: two chime notes
       [659, 1047].forEach(function(freq, i) {
