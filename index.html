@@ -301,6 +301,69 @@
     letter-spacing: 2px;
   }
 
+  /* Alert modal */
+  .alert-backdrop {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    animation: backdropIn 0.3s ease-out;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .alert-backdrop.closing {
+    animation: backdropOut 0.25s ease-in forwards;
+  }
+  @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes backdropOut { from { opacity: 1; } to { opacity: 0; } }
+
+  .alert-dialog {
+    background: #fff;
+    border-radius: 20px;
+    padding: 36px 32px 28px;
+    text-align: center;
+    max-width: 320px;
+    width: 85vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    animation: dialogIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .alert-backdrop.closing .alert-dialog {
+    animation: dialogOut 0.2s ease-in forwards;
+  }
+  @keyframes dialogIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes dialogOut {
+    from { transform: scale(1); opacity: 1; }
+    to { transform: scale(0.85); opacity: 0; }
+  }
+  .alert-icon { font-size: 48px; margin-bottom: 10px; }
+  .alert-title {
+    font-size: 20px; font-weight: 700;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .alert-subtitle {
+    font-size: 14px; color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+  .alert-btn {
+    border: none; border-radius: 12px;
+    padding: 12px 40px;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer; color: #fff;
+    background: var(--work-color);
+    transition: transform 0.15s, background 0.3s;
+    letter-spacing: 0.5px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body.break-mode .alert-btn { background: var(--break-color); }
+  .alert-btn:active { transform: scale(0.95); }
+
   /* Celebration particles */
   .particles-container {
     position: fixed;
@@ -425,6 +488,16 @@
   <div class="page-title">POMODORO</div>
 </div>
 
+<!-- Alert modal -->
+<div class="alert-backdrop" id="alertBackdrop" style="display:none;">
+  <div class="alert-dialog">
+    <div class="alert-icon" id="alertIcon"></div>
+    <div class="alert-title" id="alertTitle"></div>
+    <div class="alert-subtitle" id="alertSubtitle"></div>
+    <button class="alert-btn" id="alertDismissBtn">知道了</button>
+  </div>
+</div>
+
 <div class="particles-container" id="particlesContainer"></div>
 
 <script>
@@ -440,6 +513,8 @@ let timerId = null;
 let cycleCount = parseInt(localStorage.getItem('pomodoroCycles') || '0', 10);
 let soundType = localStorage.getItem('pomodoroSound') || 'classic';
 let lastDisplayedMinute = -1;
+
+let alertLoopId = null;
 
 // --- DOM refs ---
 const card = document.getElementById('card');
@@ -512,7 +587,6 @@ function tick() {
     clearInterval(timerId);
     timerId = null;
     timerRingWrap.classList.remove('running');
-    playSound();
     celebrate();
     card.classList.add('shake');
     setTimeout(function() { card.classList.remove('shake'); }, 500);
@@ -522,6 +596,7 @@ function tick() {
     updateUI(true);
     btnToggle.textContent = '开始';
     setPresetsEnabled(true);
+    showAlert();
   }
 }
 
@@ -548,6 +623,9 @@ function switchMode() {
 function resetTimer() {
   clearInterval(timerId);
   timerId = null;
+  stopAlertLoop();
+  var backdrop = document.getElementById('alertBackdrop');
+  if (backdrop.style.display !== 'none') { backdrop.style.display = 'none'; }
   isWork = true;
   totalDuration = workDuration;
   remaining = workDuration;
@@ -681,22 +759,61 @@ function playSound() {
     var t = ctx.currentTime;
 
     if (soundType === 'classic') {
-      // Kitchen timer: two-note ascending bell "ding-ding-ding"
       [587, 784, 988].forEach(function(freq, i) {
         bellTone(ctx, freq, t + i * 0.35, 0.45, 0.7);
       });
     } else if (soundType === 'chime') {
-      // Wind chime cascading arpeggio C5→E5→G5→C6→E6
       [523, 659, 784, 1047, 1319].forEach(function(freq, i) {
         chimeNote(ctx, freq, t + i * 0.22, 0.8, 0.5);
       });
     } else if (soundType === 'digital') {
-      // Rising digital notification: A4→C5→E5
       [440, 523, 659].forEach(function(freq, i) {
         digitalTone(ctx, freq, t + i * 0.15, 0.25, 0.55);
       });
     }
   } catch(e) { /* audio not available */ }
+}
+
+// --- Alert modal with looping sound ---
+function getSoundLoopInterval() {
+  if (soundType === 'chime') return 2200;
+  if (soundType === 'digital') return 1400;
+  return 2500; // classic
+}
+
+function startAlertLoop() {
+  if (soundType !== 'none') {
+    playSound();
+    alertLoopId = setInterval(playSound, getSoundLoopInterval());
+  }
+}
+
+function stopAlertLoop() {
+  if (alertLoopId) {
+    clearInterval(alertLoopId);
+    alertLoopId = null;
+  }
+}
+
+function showAlert() {
+  var wasWork = !isWork; // switchMode already flipped it
+  document.getElementById('alertIcon').textContent = wasWork ? '🍅' : '☕';
+  document.getElementById('alertTitle').textContent = wasWork ? '工作完成！' : '休息结束！';
+  document.getElementById('alertSubtitle').textContent = wasWork
+    ? '太棒了，休息一下吧 ~'
+    : '休息好了，继续加油！';
+  document.getElementById('alertBackdrop').style.display = 'flex';
+  startAlertLoop();
+}
+
+function dismissAlert() {
+  var backdrop = document.getElementById('alertBackdrop');
+  backdrop.classList.add('closing');
+  stopAlertLoop();
+  setTimeout(function() {
+    backdrop.style.display = 'none';
+    backdrop.classList.remove('closing');
+  }, 250);
 }
 
 function previewSound(type) {
@@ -734,6 +851,15 @@ document.querySelector('.sound-row').addEventListener('click', function(e) {
 
 // Set initial sound button state
 document.querySelector('.sound-btn[data-sound="' + soundType + '"]').classList.add('active');
+
+// --- Alert dismiss handlers ---
+document.getElementById('alertDismissBtn').addEventListener('click', dismissAlert);
+document.getElementById('alertBackdrop').addEventListener('click', function(e) {
+  if (e.target === this) dismissAlert();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') dismissAlert();
+});
 
 // --- Celebration particles ---
 function celebrate() {
