@@ -42,18 +42,36 @@
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
+    overflow: hidden;
   }
   body.break-mode { background: #eaf7ee; }
 
   .card {
     background: var(--card-bg);
     border-radius: 24px;
-    padding: 48px 40px 36px;
+    padding: 36px 36px 28px;
     box-shadow: var(--shadow);
     text-align: center;
-    width: 380px;
-    max-width: 90vw;
-    transition: box-shadow 0.3s;
+    width: 400px;
+    max-width: 92vw;
+    transition: box-shadow 0.3s, transform 0.3s;
+    animation: cardIn 0.5s ease-out;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card.shake {
+    animation: cardShake 0.5s ease-out;
+  }
+  @keyframes cardShake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px); }
+    30% { transform: translateX(6px); }
+    45% { transform: translateX(-4px); }
+    60% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+    90% { transform: translateX(2px); }
   }
 
   .mode-badge {
@@ -63,24 +81,58 @@
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 1px;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
     background: var(--work-light);
     color: var(--work-color);
-    transition: background 0.4s, color 0.4s;
+    transition: background 0.4s, color 0.4s, transform 0.3s;
   }
   body.break-mode .mode-badge {
     background: var(--break-light);
     color: var(--break-color);
   }
+  .mode-badge.pop {
+    animation: badgePop 0.4s ease-out;
+  }
+  @keyframes badgePop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
 
   .timer-ring-wrap {
     position: relative;
     width: 240px; height: 240px;
-    margin: 0 auto 28px;
+    margin: 0 auto 20px;
+    transition: transform 0.3s;
+  }
+  .timer-ring-wrap.running {
+    animation: ringPulse 2s ease-in-out infinite;
+  }
+  @keyframes ringPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
   }
   .timer-ring-wrap svg {
     transform: rotate(-90deg);
     width: 100%; height: 100%;
+  }
+  .ring-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .timer-ring-wrap.running .ring-glow {
+    opacity: 0.35;
+    animation: glowBreathe 2s ease-in-out infinite;
+  }
+  @keyframes glowBreathe {
+    0%, 100% { opacity: 0.2; filter: blur(20px); }
+    50% { opacity: 0.45; filter: blur(24px); }
   }
   .ring-bg {
     fill: none;
@@ -92,7 +144,7 @@
     stroke: var(--work-color);
     stroke-width: 8;
     stroke-linecap: round;
-    transition: stroke 0.4s, stroke-dashoffset 0.35s;
+    transition: stroke 0.4s, stroke-dashoffset 0.35s linear;
   }
   body.break-mode .ring-progress { stroke: var(--break-color); }
 
@@ -105,13 +157,105 @@
     font-variant-numeric: tabular-nums;
     color: var(--text);
     letter-spacing: 2px;
+    transition: transform 0.15s;
+  }
+  .time-display.flip {
+    animation: timeFlip 0.2s ease-out;
+  }
+  @keyframes timeFlip {
+    0% { transform: translate(-50%, -50%) scale(1.08); }
+    100% { transform: translate(-50%, -50%) scale(1); }
   }
 
   .session-count {
     font-size: 13px;
     color: var(--text-secondary);
-    margin-bottom: 28px;
+    margin-bottom: 18px;
     letter-spacing: 0.5px;
+  }
+
+  .presets {
+    margin-bottom: 18px;
+  }
+  .preset-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+  .preset-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .preset-chip {
+    border: 1.5px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: #fff;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+    min-height: 32px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .preset-chip:active { transform: scale(0.95); }
+  .preset-chip.active {
+    border-color: var(--work-color);
+    background: var(--work-light);
+    color: var(--work-color);
+    font-weight: 600;
+  }
+  body.break-mode .preset-chip.active {
+    border-color: var(--break-color);
+    background: var(--break-light);
+    color: var(--break-color);
+  }
+  .preset-chip.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .sound-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .sound-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-right: 4px;
+  }
+  .sound-btn {
+    border: 1.5px solid #e0e0e0;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-size: 18px;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.2s;
+    line-height: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sound-btn:active { transform: scale(0.93); }
+  .sound-btn.active {
+    border-color: #888;
+    background: #f5f5f5;
+  }
+  .sound-btn.muted {
+    opacity: 0.4;
+  }
+  .sound-btn.muted.active {
+    border-color: #e0e0e0;
+    background: #fff;
   }
 
   .buttons {
@@ -137,6 +281,7 @@
     color: #fff;
     min-width: 110px;
     box-shadow: 0 4px 14px rgba(231,76,60,0.35);
+    transition: background 0.3s, box-shadow 0.3s, transform 0.15s;
   }
   body.break-mode .btn-primary {
     background: var(--break-color);
@@ -150,66 +295,91 @@
   .btn-secondary:active { background: #d5dde5; }
 
   .page-title {
-    font-size: 13px;
-    color: #bdc3c7;
-    margin-top: 24px;
+    font-size: 12px;
+    color: #c8cfd4;
+    margin-top: 20px;
     letter-spacing: 2px;
   }
 
-  /* Mobile: small phones (< 400px) */
+  /* Celebration particles */
+  .particles-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .particle {
+    position: absolute;
+    font-size: 20px;
+    animation: particleFly 1.2s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes particleFly {
+    0% {
+      opacity: 1;
+      transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--dx), var(--dy)) scale(0.3) rotate(var(--rot));
+    }
+  }
+
+  /* Mobile: small phones */
   @media (max-width: 420px) {
     .card {
-      padding: 32px 20px 24px;
+      padding: 28px 18px 20px;
       border-radius: 20px;
       width: 100%;
       max-width: 100vw;
-      margin: 0 12px;
+      margin: 0 10px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     }
     .timer-ring-wrap {
       width: 200px; height: 200px;
-      margin-bottom: 22px;
+      margin-bottom: 16px;
     }
-    .time-display {
-      font-size: 44px;
+    .ring-glow {
+      width: 180px; height: 180px;
     }
+    .time-display { font-size: 44px; }
     .mode-badge {
-      font-size: 13px;
-      padding: 5px 16px;
-      margin-bottom: 22px;
+      font-size: 12px;
+      padding: 5px 14px;
+      margin-bottom: 16px;
     }
     .btn {
-      padding: 14px 24px;
+      padding: 13px 22px;
       font-size: 15px;
       min-height: 48px;
       border-radius: 14px;
     }
-    .btn-primary { min-width: 100px; }
-    .session-count { font-size: 12px; margin-bottom: 22px; }
-    .page-title { font-size: 11px; margin-top: 18px; }
+    .btn-primary { min-width: 90px; }
+    .session-count { font-size: 12px; margin-bottom: 14px; }
+    .page-title { font-size: 11px; margin-top: 16px; }
     .buttons { gap: 10px; }
+    .preset-label { font-size: 10px; margin-bottom: 4px; }
+    .preset-chip { padding: 4px 10px; font-size: 12px; border-radius: 14px; }
+    .presets { margin-bottom: 14px; }
+    .sound-row { margin-bottom: 16px; }
   }
 
-  /* Larger mobile / tablets */
   @media (min-width: 421px) and (max-width: 768px) {
-    .card {
-      padding: 40px 32px 30px;
-    }
-    .timer-ring-wrap {
-      width: 220px; height: 220px;
-    }
-    .time-display {
-      font-size: 50px;
-    }
+    .card { padding: 36px 28px 24px; }
+    .timer-ring-wrap { width: 220px; height: 220px; }
+    .ring-glow { width: 200px; height: 200px; }
+    .time-display { font-size: 50px; }
   }
 </style>
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="card">
   <div class="mode-badge" id="modeBadge">工作中</div>
 
-  <div class="timer-ring-wrap">
+  <div class="timer-ring-wrap" id="timerRingWrap">
+    <div class="ring-glow" id="ringGlow" style="background: radial-gradient(circle, var(--work-color) 0%, transparent 70%);"></div>
     <svg width="240" height="240" viewBox="0 0 240 240">
       <circle class="ring-bg" cx="120" cy="120" r="108"/>
       <circle class="ring-progress" id="ringProgress" cx="120" cy="120" r="108"
@@ -220,6 +390,33 @@
 
   <div class="session-count" id="sessionCount">已完成 0 个番茄</div>
 
+  <div class="presets">
+    <div class="preset-label">工作时间</div>
+    <div class="preset-row" id="workPresets">
+      <button class="preset-chip" data-min="15">15 分钟</button>
+      <button class="preset-chip active" data-min="25">25 分钟</button>
+      <button class="preset-chip" data-min="45">45 分钟</button>
+      <button class="preset-chip" data-min="60">60 分钟</button>
+    </div>
+  </div>
+
+  <div class="presets">
+    <div class="preset-label">休息时间</div>
+    <div class="preset-row" id="breakPresets">
+      <button class="preset-chip active" data-min="5">5 分钟</button>
+      <button class="preset-chip" data-min="10">10 分钟</button>
+      <button class="preset-chip" data-min="15">15 分钟</button>
+    </div>
+  </div>
+
+  <div class="sound-row">
+    <span class="sound-label">提示音</span>
+    <button class="sound-btn active" data-sound="classic" title="经典">&#x1F514;</button>
+    <button class="sound-btn" data-sound="chime" title="风铃">&#x1F3B5;</button>
+    <button class="sound-btn" data-sound="digital" title="电子">&#x1F4F3;</button>
+    <button class="sound-btn muted" data-sound="none" title="静音">&#x1F507;</button>
+  </div>
+
   <div class="buttons">
     <button class="btn btn-primary" id="btnToggle" onclick="toggleTimer()">开始</button>
     <button class="btn btn-secondary" id="btnReset" onclick="resetTimer()">重置</button>
@@ -228,33 +425,55 @@
   <div class="page-title">POMODORO</div>
 </div>
 
+<div class="particles-container" id="particlesContainer"></div>
+
 <script>
-const WORK_SEC = 25 * 60;
-const BREAK_SEC = 5 * 60;
 const CIRCUMFERENCE = 2 * Math.PI * 108;
 
+// --- State ---
 let isWork = true;
-let remaining = WORK_SEC;
-let totalDuration = WORK_SEC;
+let remaining = 25 * 60;
+let totalDuration = 25 * 60;
+let workDuration = 25 * 60;
+let breakDuration = 5 * 60;
 let timerId = null;
 let cycleCount = parseInt(localStorage.getItem('pomodoroCycles') || '0', 10);
+let soundType = localStorage.getItem('pomodoroSound') || 'classic';
+let lastDisplayedMinute = -1;
 
+// --- DOM refs ---
+const card = document.getElementById('card');
 const modeBadge = document.getElementById('modeBadge');
 const ringProgress = document.getElementById('ringProgress');
+const ringGlow = document.getElementById('ringGlow');
 const timeDisplay = document.getElementById('timeDisplay');
 const sessionCount = document.getElementById('sessionCount');
 const btnToggle = document.getElementById('btnToggle');
 const themeMeta = document.getElementById('themeMeta');
+const timerRingWrap = document.getElementById('timerRingWrap');
+const particlesContainer = document.getElementById('particlesContainer');
 
-function updateUI() {
+// --- Update UI ---
+function updateUI(forceFlip) {
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;
   timeDisplay.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+
+  if (forceFlip || (m !== lastDisplayedMinute && s === 0)) {
+    timeDisplay.classList.remove('flip');
+    void timeDisplay.offsetWidth;
+    timeDisplay.classList.add('flip');
+  }
+  lastDisplayedMinute = m;
 
   const fraction = remaining / totalDuration;
   ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - fraction);
 
   document.body.classList.toggle('break-mode', !isWork);
+  ringGlow.style.background = isWork
+    ? 'radial-gradient(circle, rgba(231,76,60,0.5) 0%, transparent 70%)'
+    : 'radial-gradient(circle, rgba(46,204,113,0.5) 0%, transparent 70%)';
+
   if (isWork) {
     modeBadge.textContent = '工作中';
     themeMeta.content = '#e74c3c';
@@ -266,6 +485,7 @@ function updateUI() {
   sessionCount.textContent = '已完成 ' + cycleCount + ' 个番茄';
 }
 
+// --- Timer controls ---
 function toggleTimer() {
   if (timerId) { pauseTimer(); } else { startTimer(); }
 }
@@ -273,12 +493,16 @@ function toggleTimer() {
 function startTimer() {
   timerId = setInterval(tick, 1000);
   btnToggle.textContent = '暂停';
+  timerRingWrap.classList.add('running');
+  setPresetsEnabled(false);
 }
 
 function pauseTimer() {
   clearInterval(timerId);
   timerId = null;
   btnToggle.textContent = '开始';
+  timerRingWrap.classList.remove('running');
+  setPresetsEnabled(true);
 }
 
 function tick() {
@@ -287,10 +511,17 @@ function tick() {
   if (remaining <= 0) {
     clearInterval(timerId);
     timerId = null;
-    playBeeps();
+    timerRingWrap.classList.remove('running');
+    playSound();
+    celebrate();
+    card.classList.add('shake');
+    setTimeout(function() { card.classList.remove('shake'); }, 500);
+    modeBadge.classList.add('pop');
+    setTimeout(function() { modeBadge.classList.remove('pop'); }, 400);
     switchMode();
-    updateUI();
+    updateUI(true);
     btnToggle.textContent = '开始';
+    setPresetsEnabled(true);
   }
 }
 
@@ -300,42 +531,171 @@ function switchMode() {
     localStorage.setItem('pomodoroCycles', cycleCount);
   }
   isWork = !isWork;
-  remaining = isWork ? WORK_SEC : BREAK_SEC;
-  totalDuration = isWork ? WORK_SEC : BREAK_SEC;
+  totalDuration = isWork ? workDuration : breakDuration;
+  remaining = totalDuration;
+
+  // Update preset active states
+  document.querySelectorAll('#workPresets .preset-chip').forEach(function(chip) {
+    var min = parseInt(chip.dataset.min, 10);
+    chip.classList.toggle('active', isWork && min * 60 === workDuration);
+  });
+  document.querySelectorAll('#breakPresets .preset-chip').forEach(function(chip) {
+    var min = parseInt(chip.dataset.min, 10);
+    chip.classList.toggle('active', !isWork && min * 60 === breakDuration);
+  });
 }
 
 function resetTimer() {
   clearInterval(timerId);
   timerId = null;
   isWork = true;
-  remaining = WORK_SEC;
-  totalDuration = WORK_SEC;
+  totalDuration = workDuration;
+  remaining = workDuration;
   btnToggle.textContent = '开始';
+  timerRingWrap.classList.remove('running');
+  setPresetsEnabled(true);
   updateUI();
-}
-
-function playBeeps() {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  [0, 0.2, 0.4].forEach(function(delay, i) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = i === 2 ? 1000 : 800;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
-    osc.start(ctx.currentTime + delay);
-    osc.stop(ctx.currentTime + delay + 0.3);
+  // Reset preset highlight
+  document.querySelectorAll('#workPresets .preset-chip').forEach(function(chip) {
+    chip.classList.toggle('active', parseInt(chip.dataset.min, 10) * 60 === workDuration);
+  });
+  document.querySelectorAll('#breakPresets .preset-chip').forEach(function(chip) {
+    chip.classList.toggle('active', parseInt(chip.dataset.min, 10) * 60 === breakDuration);
   });
 }
 
-// PWA: Register service worker
+// --- Presets ---
+function setPresetsEnabled(enabled) {
+  document.querySelectorAll('.preset-chip').forEach(function(chip) {
+    chip.classList.toggle('disabled', !enabled);
+  });
+}
+
+document.getElementById('workPresets').addEventListener('click', function(e) {
+  var chip = e.target.closest('.preset-chip');
+  if (!chip || chip.classList.contains('disabled') || timerId || !isWork) return;
+  var min = parseInt(chip.dataset.min, 10);
+  workDuration = min * 60;
+  totalDuration = workDuration;
+  remaining = workDuration;
+  document.querySelectorAll('#workPresets .preset-chip').forEach(function(c) { c.classList.remove('active'); });
+  chip.classList.add('active');
+  updateUI();
+});
+
+document.getElementById('breakPresets').addEventListener('click', function(e) {
+  var chip = e.target.closest('.preset-chip');
+  if (!chip || chip.classList.contains('disabled') || timerId) return;
+  var min = parseInt(chip.dataset.min, 10);
+  breakDuration = min * 60;
+  if (!isWork) {
+    totalDuration = breakDuration;
+    remaining = breakDuration;
+    updateUI();
+  }
+  document.querySelectorAll('#breakPresets .preset-chip').forEach(function(c) { c.classList.remove('active'); });
+  chip.classList.add('active');
+});
+
+// --- Sound ---
+document.querySelector('.sound-row').addEventListener('click', function(e) {
+  var btn = e.target.closest('.sound-btn');
+  if (!btn) return;
+  soundType = btn.dataset.sound;
+  localStorage.setItem('pomodoroSound', soundType);
+  document.querySelectorAll('.sound-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+});
+
+// Set initial sound button state
+document.querySelector('.sound-btn[data-sound="' + soundType + '"]').classList.add('active');
+
+function playSound() {
+  if (soundType === 'none') return;
+
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    if (soundType === 'classic') {
+      // Three ascending beeps
+      [0, 0.2, 0.4].forEach(function(delay, i) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = i === 2 ? 1000 : 800;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.3);
+      });
+    } else if (soundType === 'chime') {
+      // Soft melodic chime
+      var notes = [523, 659, 784, 1047];
+      notes.forEach(function(freq, i) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        var t = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        osc.start(t);
+        osc.stop(t + 0.55);
+      });
+    } else if (soundType === 'digital') {
+      // Two-tone digital alert
+      [800, 1200].forEach(function(freq, i) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'square';
+        var t = ctx.currentTime + i * 0.25;
+        gain.gain.setValueAtTime(0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+        osc.start(t);
+        osc.stop(t + 0.25);
+      });
+    }
+  } catch(e) { /* audio not available */ }
+}
+
+// --- Celebration particles ---
+function celebrate() {
+  var emojis = isWork ? ['🍅', '✨', '🎯', '💪', '⭐', '🔥'] : ['☕', '🌿', '🎉', '😌', '💚', '🌸'];
+  var rect = card.getBoundingClientRect();
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top + rect.height / 2;
+
+  for (var i = 0; i < 18; i++) {
+    var particle = document.createElement('span');
+    particle.className = 'particle';
+    particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    particle.style.left = cx + 'px';
+    particle.style.top = cy + 'px';
+    var angle = Math.random() * Math.PI * 2;
+    var dist = 60 + Math.random() * 120;
+    particle.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    particle.style.setProperty('--dy', Math.sin(angle) * dist - 40 - Math.random() * 60 + 'px');
+    particle.style.setProperty('--rot', (Math.random() - 0.5) * 360 + 'deg');
+    particle.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+    particle.style.fontSize = (16 + Math.random() * 14) + 'px';
+    particlesContainer.appendChild(particle);
+    setTimeout(function() { particle.remove(); }, 1600);
+  }
+}
+
+// --- PWA ---
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(function() {});
 }
 
-// Init
+// --- Init ---
 updateUI();
 </script>
 
