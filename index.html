@@ -549,7 +549,8 @@
 
 <div class="particles-container" id="particlesContainer"></div>
 
-
+<audio id="bgmAudio" src="铃声bgm.mp3" preload="auto"></audio>
+<audio id="catAudio" src="猫叫bgm.mp3" preload="auto"></audio>
 
 <script>
 const CIRCUMFERENCE = 2 * Math.PI * 108;
@@ -816,44 +817,8 @@ function digitalTone(ctx, freq, startTime, duration, volume) {
   car.stop(startTime + duration + 0.05);
 }
 
-var sharedAudioCtx = null;
 function getAudioCtx() {
-  if (!sharedAudioCtx) {
-    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (sharedAudioCtx.state === 'suspended') {
-    sharedAudioCtx.resume();
-  }
-  return sharedAudioCtx;
-}
-
-function meowSynth(ctx, startTime, duration, volume) {
-  var car = ctx.createOscillator();
-  var carGain = ctx.createGain();
-  car.connect(carGain);
-  carGain.connect(ctx.destination);
-  car.type = 'triangle';
-  car.frequency.setValueAtTime(450, startTime);
-  car.frequency.linearRampToValueAtTime(750, startTime + 0.12);
-  car.frequency.linearRampToValueAtTime(280, startTime + duration);
-  carGain.gain.setValueAtTime(volume * 0.5, startTime);
-  carGain.gain.setValueAtTime(volume * 0.5, startTime + 0.08);
-  carGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  car.start(startTime);
-  car.stop(startTime + duration + 0.1);
-
-  var harm = ctx.createOscillator();
-  var harmGain = ctx.createGain();
-  harm.connect(harmGain);
-  harmGain.connect(ctx.destination);
-  harm.type = 'sine';
-  harm.frequency.setValueAtTime(900, startTime);
-  harm.frequency.linearRampToValueAtTime(1500, startTime + 0.1);
-  harm.frequency.linearRampToValueAtTime(550, startTime + duration);
-  harmGain.gain.setValueAtTime(volume * 0.25, startTime);
-  harmGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-  harm.start(startTime);
-  harm.stop(startTime + duration + 0.1);
+  return new (window.AudioContext || window.webkitAudioContext)();
 }
 
 function playSound() {
@@ -863,15 +828,17 @@ function playSound() {
     var t = ctx.currentTime;
 
     if (soundType === 'classic') {
-      bellTone(ctx, 784, t, 0.45, 0.5);
-      bellTone(ctx, 659, t + 0.3, 0.4, 0.4);
+      var audio = document.getElementById('bgmAudio');
+      audio.currentTime = 0;
+      audio.play().catch(function() {});
     } else if (soundType === 'chime') {
       [523, 659, 784, 1047, 1319].forEach(function(freq, i) {
         chimeNote(ctx, freq, t + i * 0.22, 0.8, 0.5);
       });
     } else if (soundType === 'digital') {
-      meowSynth(ctx, t, 0.55, 0.5);
-      meowSynth(ctx, t + 0.25, 0.45, 0.4);
+      var cat = document.getElementById('catAudio');
+      cat.currentTime = 0;
+      cat.play().catch(function() {});
     }
   } catch(e) { /* audio not available */ }
 }
@@ -879,14 +846,21 @@ function playSound() {
 // --- Alert modal with looping sound ---
 function getSoundLoopInterval() {
   if (soundType === 'chime') return 2200;
-  if (soundType === 'digital') return 1800;
-  return 1500; // classic bell ding-dong
+  if (soundType === 'digital') return 1400;
+  return 1800; // classic
 }
 
 function startAlertLoop() {
   if (soundType === 'none') return;
-  playSound();
-  alertLoopId = setInterval(playSound, getSoundLoopInterval());
+  if (soundType === 'classic' || soundType === 'digital') {
+    var audio = soundType === 'classic' ? document.getElementById('bgmAudio') : document.getElementById('catAudio');
+    audio.loop = true;
+    audio.currentTime = 0;
+    audio.play().catch(function() {});
+  } else {
+    playSound();
+    alertLoopId = setInterval(playSound, getSoundLoopInterval());
+  }
 }
 
 function stopAlertLoop() {
@@ -894,6 +868,10 @@ function stopAlertLoop() {
     clearInterval(alertLoopId);
     alertLoopId = null;
   }
+  var audio = document.getElementById('bgmAudio');
+  audio.loop = false; audio.pause(); audio.currentTime = 0;
+  var cat = document.getElementById('catAudio');
+  cat.loop = false; cat.pause(); cat.currentTime = 0;
 }
 
 function showAlert() {
