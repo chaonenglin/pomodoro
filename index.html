@@ -562,6 +562,8 @@ let totalDuration = 25 * 60;
 let workDuration = 25 * 60;
 let breakDuration = 5 * 60;
 let timerId = null;
+let timerStartTime = 0;
+let remainingAtStart = 0;
 let cycleCount = parseInt(localStorage.getItem('pomodoroCycles') || '0', 10);
 let soundType = localStorage.getItem('pomodoroSound') || 'classic';
 let lastDisplayedMinute = -1;
@@ -636,7 +638,9 @@ function toggleTimer() {
 }
 
 function startTimer() {
-  timerId = setInterval(tick, 1000);
+  remainingAtStart = remaining;
+  timerStartTime = Date.now();
+  timerId = setInterval(tick, 250);
   btnToggle.textContent = '暂停';
   timerRingWrap.classList.add('running');
   setPresetsEnabled(false);
@@ -651,7 +655,10 @@ function pauseTimer() {
 }
 
 function tick() {
-  remaining--;
+  if (!timerId) return;
+  var elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+  remaining = remainingAtStart - elapsed;
+  if (remaining < 0) remaining = 0;
   updateUI();
   if (remaining <= 0) {
     clearInterval(timerId);
@@ -989,10 +996,17 @@ document.getElementById('wakeBtn').addEventListener('click', function() {
   localStorage.setItem('pomodoroWake', wakeEnabled ? '1' : '0');
 });
 
-// Re-acquire lock when page becomes visible again
+// Re-acquire lock and sync timer when page becomes visible again
+function onPageVisible() {
+  if (timerId) tick();
+  requestWakeLock();
+}
+
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible') requestWakeLock();
+  if (document.visibilityState === 'visible') onPageVisible();
 });
+window.addEventListener('focus', onPageVisible);
+window.addEventListener('pageshow', onPageVisible);
 
 // Init wake lock
 if ('wakeLock' in navigator) {
